@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.pmj136.api.mapper.MsgNoticeMapper">
+    <select id="getMsgList" resultType="java.util.Map">
+        select jmn.*, ju.nick
+        from jiu_msg_notice jmn
+                 left join jiu_user ju on ju.id = jmn.user_id
+        where jmn.target_id = #{target_id}
+        order by time desc
+    </select>
+
+    <select id="getNewMsgTotal" resultType="java.lang.Integer">
+        select count(id)
+        from jiu_msg_notice
+        where target_id = #{target_id}
+          and is_review = 0
+    </select>
+</mapper>

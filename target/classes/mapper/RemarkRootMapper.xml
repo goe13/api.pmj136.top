@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.pmj136.api.mapper.RemarkRootMapper">
+    <select id="getList" resultMap="getRootList">
+        select ju.nick,
+               ju.avatar_url,
+               jrr.id,
+               jrr.time,
+               jrr.content,
+               jrr.user_id
+        from jiu_remark_root jrr
+                 left join jiu_user ju on ju.id = jrr.user_id
+        where jrr.article_id = #{article_id}
+        order by jrr.id desc
+        limit ${(page - 1)*size},${size}
+    </select>
+
+    <resultMap id="getRootList" type="RemarkRoot">
+        <id column="id" property="id"></id>
+        <result column="user_id" property="userId"></result>
+        <result column="content" property="content"></result>
+        <result column="time" property="time"></result>
+        <result column="nick" property="nick"></result>
+        <result column="avatar_url" property="avatarUrl"></result>
+        <collection property="children" column="id" ofType="RemarkChild" select="getChildList">
+        </collection>
+    </resultMap>
+
+    <select id="getChildList" resultType="RemarkChild">
+        select ju.nick,
+               ju.avatar_url,
+               jrc.id,
+               jrc.target_id,
+               jrc.parent_id,
+               jrc.comment_id,
+               jrc.time,
+               jrc.content,
+               jrc.user_id,
+               (select nick from jiu_user where id = jrc.target_id) target_nick
+        from jiu_remark_child jrc
+                 left join jiu_user ju on ju.id = jrc.user_id
+        where jrc.comment_id = #{id}
+        order by jrc.id desc
+    </select>
+
+    <insert id="addRoot" parameterType="RemarkRoot" useGeneratedKeys="true" keyProperty="id"
+            keyColumn="id">
+        insert into jiu_remark_root
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="articleId!=null">
+                article_id,
+            </if>
+            <if test="userId!=null">
+                user_id,
+            </if>
+            <if test="content!=null">
+                content,
+            </if>
+            <if test="time!=null">
+                time,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="articleId!=null">
+                #{articleId},
+            </if>
+            <if test="userId!=null">
+                #{userId},
+            </if>
+            <if test="content!=null">
+                #{content},
+            </if>
+            <if test="time!=null">
+                #{time},
+            </if>
+        </trim>
+    </insert>
+
+    <select id="isFrequentPost" resultType="java.lang.Boolean">
+        select count(id)
+        from jiu_remark_root
+        where time &gt;= (NOW() - INTERVAL 10 minute)
+          and user_id = #{user_id}
+          and article_id = ${article_id}
+          and content = #{content}
+    </select>
+    <delete id="delAllRemarkByArticleId">
+        DELETE jiu_remark_root,
+            jiu_remark_child
+        FROM jiu_remark_root
+                 LEFT JOIN jiu_remark_child ON jiu_remark_root.id = jiu_remark_child.comment_id
+        WHERE jiu_remark_root.article_id=#{article_id}
+    </delete>
+</mapper>

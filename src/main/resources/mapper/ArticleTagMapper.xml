@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.pmj136.api.mapper.ArticleTagMapper">
+    <select id="getHotTags" resultType="java.util.Map">
+        select jat.*,
+               count(jat.id) num
+        from jiu_article ja,
+             jiu_article_tag jat
+        where find_in_set(jat.id, ja.tag_ids)
+          and ja.is_del = 0
+        group by jat.id
+        order by num desc, jat.id desc
+        limit 15
+    </select>
+
+    <select id="getTagList" resultType="ArticleTag">
+        select *
+        from jiu_article_tag
+        <if test='keyword!=""'>
+            where title like concat('%', #{keyword}, '%')
+        </if>
+        order by id desc
+    </select>
+</mapper>

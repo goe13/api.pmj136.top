@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.pmj136.api.mapper.UserMapper">
+    <insert id="addUser" parameterType="User" useGeneratedKeys="true" keyProperty="id"
+            keyColumn="id">
+        insert into jiu_user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="nick!=null">
+                nick,
+            </if>
+            <if test="avatarUrl!=null">
+                avatar_url,
+            </if>
+            <if test="email!=null">
+                email,
+            </if>
+            <if test="password!=null">
+                password,
+            </if>
+            <if test="createAt!=null">
+                create_at,
+            </if>
+            <if test="githubId!=null">
+                github_id,
+            </if>
+            <if test="githubNick!=null">
+                github_nick,
+            </if>
+            <if test="giteeId!=null">
+                gitee_id,
+            </if>
+            <if test="giteeNick!=null">
+                gitee_nick,
+            </if>
+            <if test="dingtalkId!=null">
+                dingtalk_id,
+            </if>
+            <if test="dingtalkNick!=null">
+                dingtalk_nick,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="nick!=null">
+                #{nick},
+            </if>
+            <if test="avatarUrl!=null">
+                #{avatarUrl},
+            </if>
+            <if test="email!=null">
+                #{email},
+            </if>
+            <if test="password!=null">
+                #{password},
+            </if>
+            <if test="createAt!=null">
+                #{createAt},
+            </if>
+            <if test="githubId!=null">
+                #{githubId},
+            </if>
+            <if test="githubNick!=null">
+                #{githubNick},
+            </if>
+            <if test="giteeId!=null">
+                #{giteeId},
+            </if>
+            <if test="giteeNick!=null">
+                #{giteeNick},
+            </if>
+            <if test="dingtalkId!=null">
+                #{dingtalkId},
+            </if>
+            <if test="dingtalkNick!=null">
+                #{dingtalkNick},
+            </if>
+        </trim>
+    </insert>
+
+    <select id="getById" resultType="java.util.Map">
+        select ju.id,
+               ju.nick,
+               ju.integral,
+               ju.avatar_url,
+               ju.gender,
+               ju.intro,
+               ju.address,
+               ju.create_at,
+               ju.notice_count,
+               ju.fans_count,
+               sum(ja.star_count)                                                                            article_star_count,
+               sum(ja.view_count)                                                                            article_view_count,
+               (select count(id) from jiu_notice where target_id = #{find_id} and notice_id = #{user_id}) as is_notice,
+               (select count(id) from jiu_notice where target_id = #{user_id} and notice_id = #{find_id}) as is_fans
+        from jiu_user ju
+                 left join jiu_article ja on ju.id = ja.user_id
+        where ju.id = #{find_id}
+    </select>
+
+    <select id="getSignInfo" resultType="java.util.Map">
+        select if(to_days(last_sign_date) = to_days(now()), 1, 0) is_signed,
+               signed_days
+        from jiu_user
+        where id = #{user_id}
+    </select>
+
+    <select id="isContinuousSign" resultType="java.util.Map">
+        select to_days(now()) - to_days(last_sign_date) gap_days, signed_days, integral
+        from jiu_user
+        where id = #{user_id}
+    </select>
+
+    <sql id="itemCols">
+        ja.user_id,
+        ju.nick,
+        ju.avatar_url,
+        ja.id article_id,
+        ja.title,
+        ja.initial_img,
+        ja.release_time,
+        ja.type,
+        ja.star_count,
+        ja.comment_count,
+        ja.is_del,
+        (select group_concat(title) from jiu_article_tag where find_in_set(id,ja.tag_ids)) as tags
+        <if test="user_id!=null">
+            ,(select count(id) from jiu_article_star where user_id =#{user_id} and article_id = ja.id) is_star
+        </if>
+    </sql>
+
+    <select id="getDynamicsList" resultType="java.util.Map">
+        <if test="type==1">
+            select
+            <include refid="itemCols"></include>
+            from jiu_article ja
+            left join jiu_user ju on ju.id = ja.user_id
+            where ja.is_del = 0 and ja.user_id=#{find_id}
+            order by ja.release_time desc
+        </if>
+        <if test="type==2">
+            select
+            <include refid="itemCols"></include>
+            from jiu_remark_root jrt
+            left join jiu_article ja on ja.id=jrt.article_id
+            left join jiu_user ju on ju.id = ja.user_id
+            where ja.is_del = 0 and jrt.user_id=#{find_id}
+            group by jrt.article_id
+        </if>
+        <if test="type==3">
+            select
+            <include refid="itemCols"></include>
+            from jiu_article_star jas
+            left join jiu_article ja on ja.id = jas.article_id
+            left join jiu_user ju on ju.id = ja.user_id
+            where ja.is_del = 0 and jas.user_id=#{find_id}
+            order by jas.time desc
+        </if>
+        <if test="type==4">
+            select
+            <include refid="itemCols"></include>
+            from jiu_article_collect jac
+            left join jiu_article ja on ja.id = jac.article_id
+            left join jiu_user ju on ju.id = ja.user_id
+            where ja.is_del = 0 and jac.user_id=#{find_id}
+            order by jac.time desc
+        </if>
+        <if test="type==5">
+            select
+            <include refid="itemCols"></include>
+            from jiu_article ja
+            left join jiu_user ju on ju.id = ja.user_id
+            where ja.is_del = 1 and ja.user_id=#{find_id}
+            order by ja.release_time desc
+        </if>
+        <if test="type==6">
+            select ju.id,ju.avatar_url,ju.nick,ju.integral,ju.create_at
+            <if test="user_id!=null">
+                ,if(ju.id=#{user_id},1,0) is_mine
+                ,(select count(id) from jiu_notice where target_id = ju.id and notice_id = #{user_id}
+                ) as is_notice
+                ,(select count(id) from jiu_notice where target_id =#{user_id} and notice_id = ju.id
+                ) as is_fans
+            </if>
+            from jiu_notice jn
+            left join jiu_user ju on ju.id=jn.target_id
+            where jn.notice_id=#{find_id}
+            order by jn.time desc
+        </if>
+        <if test="type==7">
+            select ju.id,ju.avatar_url,ju.nick,ju.integral,ju.create_at
+            <if test="user_id!=null">
+                ,if(ju.id=#{user_id},1,0) is_mine
+                ,(select count(id) from jiu_notice where target_id = ju.id and notice_id = #{user_id}
+                ) as is_notice
+                ,(select count(id) from jiu_notice where target_id =#{user_id} and notice_id = ju.id
+                ) as is_fans
+            </if>
+            from jiu_notice jn
+            left join jiu_user ju on ju.id=jn.notice_id
+            where jn.target_id=#{find_id}
+            order by jn.time desc
+        </if>
+    </select>
+
+    <update id="unbind">
+        update jiu_user set
+        <if test="type==1">
+            github_id=null,github_nick=null
+        </if>
+        <if test="type==2">
+            gitee_id=null,gitee_nick=null
+        </if>
+        <if test="type==3">
+            dingtalk_id=null,dingtalk_nick=null
+        </if>
+        where id = #{user_id}
+    </update>
+
+    <select id="countGender" resultType="java.lang.Integer">
+        select count(id) total
+        from jiu_user
+          where gender = #{gender}
+    </select>
+
+    <select id="getGrowth" resultType="java.util.Map">
+        SELECT a.create_at           time,
+               ifnull(b.count, 0) AS count
+        FROM (
+                 SELECT curdate() AS create_at
+                 UNION ALL#前一天
+                 SELECT date_sub(curdate(), INTERVAL 1 DAY) AS create_at
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 2 DAY) AS create_at
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 3 DAY) AS create_at
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 4 DAY) AS create_at
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 5 DAY) AS create_at
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 6 DAY) AS create_at
+             ) a
+                 LEFT JOIN
+             (SELECT date(create_at) AS datetime, count(*) AS count FROM jiu_user GROUP BY datetime) b
+             ON a.create_at = b.datetime
+        order by time;
+    </select>
+
+    <select id="getUserList" resultType="java.util.Map">
+        select *
+        from jiu_user
+        <if test='keyword!=""'>
+            where nick like concat('%', #{keyword}, '%')
+        </if>
+        order by create_at desc
+    </select>
+</mapper>

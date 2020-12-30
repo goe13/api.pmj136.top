@@ -1,0 +1,87 @@
+server:
+  port: 6891
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+  datasource:
+    url: jdbc:mysql://localhost:3306/community?useLegacyDatetimeCode=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 34rt5ty4yss.
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      min-idle: 5
+      max-active: 20
+      initial-size: 8
+  jackson:
+    #        default-property-inclusion: non_null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  #    generator:
+  #      write_numbers_as_strings: true
+  redis:
+    #    host: 121.196.184.65
+    host: 127.0.0.1
+    port: 6379
+    password: jj39gesge.
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: pmj136@foxmail.com
+    password: xmgmgvcoekrrfgjh
+    properties:
+      mail:
+        smtp:
+          ssl:
+            trust: smtp.qq.com
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+            port: 465
+            auth: true
+            starttls:
+              enable: true
+              required: true
+
+
+logging:
+  level:
+    root: error
+  file:
+    name: err/error.log
+
+#mapper
+mybatis-plus:
+  global-config:
+    banner: false
+  type-aliases-package: top/pmj136/api/entity
+  mapper-locations: classpath:mapper/*
+  configuration:
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+    call-setters-on-nulls: true
+
+
+#config
+api:
+  upload:
+    default-avatar: https://img.pmj136.top/avatar/default-avatar.jpg
+    base-path: /home/img/  # linux
+  #    base-path: D:\project\idea\imgs\ # local windows
+  cache: #数据库缓存数据
+    expire: 1 #小时
+  token:
+    expire: 604800 #token 过期时间
+  cookie: #cookie设置
+    domain: pmj136.top
+    #    domain: localhost
+    http-only: false
+    expire: 604800
+
+#aliyun:
+#  oss:
+#    bucket-name: pmj136
+#    key: LTAI4GELmrujBiLUWLnH3Qvx
+#    secret: LSJxMVltZ4OYwGod3lNQUO9y2kf2eR
+#    endpoint: https://oss-cn-hangzhou.aliyuncs.com

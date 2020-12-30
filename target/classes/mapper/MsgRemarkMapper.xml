@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.pmj136.api.mapper.MsgRemarkMapper">
+    <select id="getMsgList" resultMap="getMsgMap">
+        select jmr.*
+             , ju.nick
+             , ja.title article_title
+        from jiu_msg_remark jmr
+                 left join jiu_user ju on ju.id = jmr.user_id
+                 left join jiu_article ja on ja.id = jmr.article_id
+        where jmr.target_id = #{target_id}
+        order by time desc
+    </select>
+
+    <resultMap id="getMsgMap" type="MsgRemark">
+        <id column="id" property="id"></id>
+        <result column="action" property="action"></result>
+        <result column="user_id" property="userId"></result>
+        <result column="target_id" property="targetId"></result>
+        <result column="article_id" property="articleId"></result>
+        <result column="remark_id" property="remarkId"></result>
+        <result column="time" property="time"></result>
+        <result column="is_review" property="isReview"></result>
+        <result column="nick" property="nick"></result>
+        <result column="article_title" property="articleTitle"></result>
+        <association property="isExit" column="{remark_id=remark_id,action=action}" select="selectIsExit">
+            <result column="is_exit" property="isExit"></result>
+        </association>
+    </resultMap>
+
+    <select id="selectIsExit" parameterType="java.util.Map" resultType="java.lang.Boolean">
+        select count(id) from
+        <if test="action==1">
+            jiu_remark_root
+        </if>
+        <if test="action==2">
+            jiu_remark_child
+        </if>
+        where id = #{remark_id}
+    </select>
+
+
+    <select id="getNewMsgTotal" resultType="java.lang.Integer">
+        select count(id)
+        from jiu_msg_remark
+        where target_id = #{target_id}
+          and is_review = 0
+    </select>
+</mapper>

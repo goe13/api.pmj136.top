@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.pmj136.api.mapper.ArticleMapper">
+
+    <select id="getList" resultType="java.util.Map">
+        select
+        ja.user_id,
+        ju.nick,
+        ju.avatar_url,
+        ja.id article_id,
+        ja.title,
+        ja.initial_img,
+        ja.release_time,
+        ja.type,
+        ja.star_count,
+        ja.comment_count,
+        (select group_concat(title) from jiu_article_tag where find_in_set(id,ja.tag_ids)) as tags
+        <if test="user_id!=null">
+            ,(select count(id) from jiu_article_star where user_id =#{user_id} and article_id = ja.id) is_star
+        </if>
+        from jiu_article ja
+        left join jiu_user ju on ju.id = ja.user_id
+        <where>
+            and ja.is_del = 0
+            <if test="type!=-1 and type!=null">
+                and ja.type = #{type}
+            </if>
+            <if test="order==3">
+                and find_in_set(ja.user_id,(select group_concat(target_id) from jiu_notice where notice_id=#{user_id}))
+            </if>
+        </where>
+        order by
+        <if test="order==2">
+            ja.star_count+ja.comment_count desc,
+        </if>
+        ja.release_time desc
+    </select>
+
+    <select id="getDetailById" resultType="java.util.Map">
+        select
+        ja.id article_id,
+        ja.user_id,
+        ju.nick user_nick,
+        ju.integral,
+        ju.avatar_url user_avatar,
+        ju.create_at,
+        ja.title acticle_title,
+        jat.text article_type,
+        ja.release_time,
+        ja.content,
+        ja.star_count,
+        ja.comment_count,
+        ja.view_count,
+        (select group_concat(title) from jiu_article_tag where find_in_set(id,ja.tag_ids)) as tags
+        <if test="user_id!=null">
+            ,(select count(id) from jiu_article_collect where user_id =#{user_id} and article_id = ja.id) is_collect
+            ,(select count(id) from jiu_notice where target_id = ja.user_id and notice_id = #{user_id}
+            ) is_notice
+            ,(select count(id) from jiu_notice where target_id =#{user_id} and notice_id = ja.user_id
+            ) is_fans
+            ,(select count(id) from jiu_article_star where user_id =#{user_id} and article_id = ja.id) is_star
+        </if>
+        from jiu_article ja
+        left join jiu_user ju on ju.id = ja.user_id
+        left join jiu_article_type jat on jat.id=ja.type
+        where ja.id = #{article_id} and ja.is_del = 0
+    </select>
+
+    <select id="search" resultType="java.util.Map">
+        <if test="type==1">
+            select
+            1 t,
+            ja.user_id,
+            ju.nick,
+            ju.avatar_url,
+            ja.id article_id,
+            ja.title,
+            ja.initial_img,
+            ja.release_time,
+            ja.type,
+            ja.star_count,
+            ja.comment_count,
+            (select group_concat(title) from jiu_article_tag where find_in_set(id,ja.tag_ids)) tags
+            <if test="user_id!=null">
+                ,(select count(id) from jiu_article_star where user_id =#{user_id} and article_id = ja.id) is_star
+            </if>
+            from jiu_article ja
+            left join jiu_user ju on ju.id = ja.user_id
+            where (ja.title like concat('%',#{keyword},'%')
+            or find_in_set(#{keyword},(select group_concat(title) from jiu_article_tag where
+            find_in_set(id,ja.tag_ids)))
+            ) and ja.is_del = 0
+            order by ja.release_time desc
+        </if>
+        <if test="type==2">
+            select 2 t, ju.id,ju.avatar_url,ju.nick,ju.integral,ju.create_at
+            <if test="user_id!=null">
+                ,if(ju.id=#{user_id},1,0) is_mine
+                ,(select count(id) from jiu_notice where target_id = ju.id and notice_id = #{user_id}
+                ) as is_notice
+                ,(select count(id) from jiu_notice where target_id =#{user_id} and notice_id = ju.id
+                ) as is_fans
+            </if>
+            from jiu_user ju
+            where ju.nick like concat('%',#{keyword},'%')
+            order by
+            <if test="user_id!=null">
+                is_mine desc,
+                is_notice desc,
+                is_fans desc,
+            </if>
+            ju.id desc
+        </if>
+        limit ${(page - 1)*size},${size}
+    </select>
+
+    <select id="searchUserByNick" resultType="java.util.Map">
+        select 2 type,ju.id,ju.avatar_url,ju.nick,ju.integral,ju.create_at
+        <if test="user_id!=null">
+            ,if(ju.id=#{user_id},1,0) is_mine
+            ,(select count(id) from jiu_notice where target_id = ju.id and notice_id = #{user_id}
+            ) as is_notice
+        </if>
+        from jiu_user ju
+        where ju.nick =#{keyword}
+        order by
+        <if test="user_id!=null">
+            is_mine desc,
+            is_notice desc,
+        </if>
+        ju.id desc
+    </select>
+
+    <select id="getSearchTotal" resultType="java.lang.Integer">
+        <if test="type==1">
+            select
+            count(sa.id)
+            from jiu_article sa
+            left join jiu_user ju on ju.id = sa.user_id
+            where (sa.title like concat('%',#{keyword},'%')
+            or find_in_set(#{keyword},(select group_concat(title) from jiu_article_tag where
+            find_in_set(id,sa.tag_ids))))
+            and sa.is_del = 0
+        </if>
+        <if test="type==2">
+            select count(ju.id)
+            from jiu_user ju
+            where ju.nick like concat('%',#{keyword},'%') and state=1
+        </if>
+    </select>
+
+    <update id="restoreArticle" parameterType="Article">
+        update jiu_article
+        set is_del=0
+        where id = #{id}
+    </update>
+
+    <delete id="forceDel">
+        delete
+        from jiu_article
+        where id = #{id}
+    </delete>
+
+    <select id="getRecommends" resultType="Article">
+        select id, title, comment_count, star_count
+        from jiu_article
+        where concat(',', tag_ids, ',') regexp concat(',', replace(#{tag_ids}, ',', ',|,'), ',')
+          and id != #{id}
+          and is_del = 0
+        order by comment_count desc, star_count desc, release_time desc
+        limit 5
+    </select>
+
+    <select id="getGrowth" resultType="java.util.Map">
+        SELECT a.time,
+               ifnull(b.count, 0) count
+        FROM (#查询当天
+                 SELECT curdate() AS time
+                 UNION ALL#前一天
+                 SELECT date_sub(curdate(), INTERVAL 1 DAY) AS time
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 2 DAY) AS time
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 3 DAY) AS time
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 4 DAY) AS time
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 5 DAY) AS time
+                 UNION ALL
+                 SELECT date_sub(curdate(), INTERVAL 6 DAY) AS time
+             ) a
+                 LEFT JOIN
+             (SELECT date(release_time) AS dt, count(*) AS count FROM jiu_article GROUP BY dt) b ON a.time = b.dt
+        order by time;
+    </select>
+
+    <select id="getManageArticleList" resultType="java.util.Map">
+        select ja.id,ja.title, ja.user_id,ju.nick, ja.release_time
+        from jiu_article ja
+        left join jiu_user ju on ju.id = ja.user_id
+        <if test='keyword!=""'>
+            where ja.title like concat('%', #{keyword}, '%')
+        </if>
+        order by ja.id desc
+    </select>
+
+</mapper>
