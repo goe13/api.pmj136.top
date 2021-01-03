@@ -3,12 +3,15 @@ package top.pmj136.api.service.impl;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
+import top.pmj136.api.component.CookieHelper;
+import top.pmj136.api.component.MailHelper;
+import top.pmj136.api.component.RedisHelper;
+import top.pmj136.api.component.UploadHelper;
 import top.pmj136.api.entity.User;
 import top.pmj136.api.mapper.MsgNoticeMapper;
 import top.pmj136.api.mapper.MsgRemarkMapper;
@@ -38,10 +41,16 @@ import java.util.Random;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
     @Resource
-    private RedisUtil redisUtil;
+    private RedisHelper redisHelper;
 
     @Resource
-    private UploadUtil uploadUtil;
+    private UploadHelper uploadHelper;
+
+    @Resource
+    private CookieHelper cookieHelper;
+
+    @Resource
+    private MailHelper mailHelper;
 
     @Value("${api.token.expire}")
     private long expire;
@@ -73,11 +82,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             return checkUser(user, client);
         }
         String nick = (String) req.get("nick");
-        String sCode = (String) redisUtil.get(email);
+        String sCode = (String) redisHelper.get(email);
         if (sCode == null) return Result.reject("验证码已过期");
         if (!code.equals(sCode)) return Result.reject("验证码有误");
         if (wordFilter.include(nick)) return Result.reject("昵称不得含有敏感字");
-        redisUtil.del(email);
+        redisHelper.del(email);
         user = findUser("email", email);
         if (user == null) {
             user = new User();
@@ -92,19 +101,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     public Result logout(String token, String client) {
-        Object cacheData = redisUtil.get(token);
+        Object cacheData = redisHelper.get(token);
         Map userData = JSONObject.parseObject(JSONObject.toJSONString(cacheData), Map.class);
         if (userData.get(getOppositeClient(client)) == null) {
-            redisUtil.del(token);
+            redisHelper.del(token);
             return Result.resolve(true);
         }
         userData.remove(client);
-        redisUtil.set(token, userData, redisUtil.getExpire(token));
+        redisHelper.set(token, userData, redisHelper.getExpire(token));
         return Result.resolve(true);
     }
 
     public Result auth(Integer user_id) {
-        if (user_id == null) return Result.build(200, "未登录", false);
+        if (user_id == null) return Result.build(200, "未登录", null);
         return Result.resolve(findUser("id", user_id));
     }
 
@@ -120,14 +129,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     public Result updatePwd(User user, String oldToken) {
-        redisUtil.del(oldToken);
+        redisHelper.del(oldToken);
         baseMapper.updateById(user);
         return Result.resolve("密码修改成功，请重新登录");
     }
 
     public Result uploadAvatar(Integer user_id, MultipartFile file) {
         String url = null;
-        Map<String, Object> objectMap = uploadUtil.push("avatar", file);
+        Map<String, Object> objectMap = uploadHelper.push("avatar", file);
         if ((boolean) objectMap.get("flag")) url = (String) objectMap.get("url");
         if (url == null) return Result.reject("头像上传失败");
         User user = new User();
@@ -171,18 +180,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     public Result postCode(String email) {
         String code = generateCode();
-        MailUtil.send("久久社区", "您的登录验证码是 " + code + ", 2分钟内有效", email);
-        redisUtil.set(email, code, 120);
+        mailHelper.send("久久社区", "您的登录验证码是 " + code + ", 2分钟内有效", email);
+        redisHelper.set(email, code, 120);
         return Result.resolve("验证码发送成功");
     }
 
     public Result bindEmail(Map<String, Object> req) {
         String email = (String) req.get("email");
         String code = (String) req.get("code");
-        String sCode = (String) redisUtil.get(email);
+        String sCode = (String) redisHelper.get(email);
         if (sCode == null) return Result.reject("验证码已过期");
         if (!code.equals(sCode)) return Result.reject("验证码有误");
-        redisUtil.del(email);
+        redisHelper.del(email);
         String password = (String) req.get("password");
         Integer user_id = (Integer) req.get("user_id");
         User user = new User();
@@ -215,7 +224,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         user.setId(user_id);
         user.setState(0);
         updateInfo(user);
-        if (redisUtil.hasKey(token)) redisUtil.del(token);
+        if (redisHelper.hasKey(token)) redisHelper.del(token);
         return Result.resolve("冻结成功");
     }
 
@@ -245,7 +254,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     public Result countMsg(Integer user_id) {
-        if (user_id == null) return null;
+        if (user_id == null) return Result.build(200, "未登录", null);
         Map<String, Object> req = new HashMap<>();
         req.put("target_id", user_id);
         req.put("range", 1);
@@ -286,12 +295,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             token = generateToken(user);
             isNeedUpdate = true;
         } else {
-            Long expire1 = redisUtil.getExpire(loginToken);
+            Long expire1 = redisHelper.getExpire(loginToken);
             if (expire1 == -1 || (expire1 > 0 && expire1 > expire / 2))
                 token = loginToken;
             else {
                 token = generateToken(user);
-                if (expire1 != -2) redisUtil.del(loginToken);
+                if (expire1 != -2) redisHelper.del(loginToken);
                 isNeedUpdate = true;
             }
         }
@@ -301,19 +310,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             user1.setToken(token);
             baseMapper.updateById(user1);
         }
-        Object cacheData = redisUtil.get(token);
+        Object cacheData = redisHelper.get(token);
         if (cacheData == null) {
             Map<String, Object> redisData = new HashMap<>();
             redisData.put("user_id", user.getId());
             redisData.put(client, true);
-            redisUtil.set(token, redisData, expire);
+            redisHelper.set(token, redisData, expire);
         } else {
             Map userData = JSONObject.parseObject(JSONObject.toJSONString(cacheData), Map.class);
             userData.put(client, true);
-            redisUtil.set(token, userData, expire);
+            redisHelper.set(token, userData, expire);
         }
 
-        CookieUtil.set("token", token);
+        cookieHelper.set("token", token);
         return Result.resolve(user);
     }
 

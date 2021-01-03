@@ -74,8 +74,8 @@ api:
   token:
     expire: 604800 #token 过期时间
   cookie: #cookie设置
-    domain: pmj136.top
-    #    domain: localhost
+    #    domain: pmj136.top
+    domain: localhost
     http-only: false
     expire: 604800
 

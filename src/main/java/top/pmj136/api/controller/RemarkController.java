@@ -3,6 +3,7 @@ package top.pmj136.api.controller;
 
 import org.springframework.web.bind.annotation.*;
 
+import top.pmj136.api.annotation.LoginId;
 import top.pmj136.api.entity.RemarkChild;
 import top.pmj136.api.entity.RemarkRoot;
 import top.pmj136.api.service.impl.RemarkChildServiceImpl;
@@ -36,7 +37,7 @@ public class RemarkController {
     /*添加评论*/
     @PostMapping("/root/add")
     public Result addRootRemark(@RequestBody @Valid RemarkRoot entity,
-                                @ModelAttribute("user_id") Integer user_id) {
+                                @LoginId Integer user_id) {
         entity.setUserId(user_id);
         return remarkRootService.add(entity);
     }
@@ -50,7 +51,7 @@ public class RemarkController {
 
     @PostMapping("/child/add")
     public Result addChildRemark(@RequestBody @Valid RemarkChild entity,
-                                 @ModelAttribute("user_id") Integer user_id) {
+                                 @LoginId Integer user_id) {
         entity.setUserId(user_id);
         return remarkChildService.addReply(entity);
     }

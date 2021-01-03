@@ -2,6 +2,7 @@ package top.pmj136.api.controller;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
+import top.pmj136.api.annotation.LoginId;
 import top.pmj136.api.entity.Friendship;
 import top.pmj136.api.service.impl.*;
 import top.pmj136.api.util.Result;
@@ -35,7 +36,7 @@ public class AppController {
 
 
     @GetMapping("/index")
-    public Result articleIndex(@ModelAttribute("user_id") Integer user_id) {
+    public Result articleIndex(@LoginId(required = false) Integer user_id) {
         Map<String, Object> resp = new HashMap<>();
         resp.put("article_types", articleTypeService.getTypes());
         resp.put("hot_tags", articleTagService.getHotTags());

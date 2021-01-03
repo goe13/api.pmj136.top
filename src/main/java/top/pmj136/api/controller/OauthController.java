@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
-import top.pmj136.api.common.OauthUrl;
+import top.pmj136.api.annotation.LoginId;
+import top.pmj136.api.component.OauthUrl;
 import top.pmj136.api.entity.User;
 import top.pmj136.api.service.impl.UserServiceImpl;
 
@@ -39,7 +40,7 @@ public class OauthController {
     private OauthUrl oauthUrl;
 
     @GetMapping("/github/callback")
-    public void githubCb(@ModelAttribute("user_id") Integer user_id,
+    public void githubCb(@LoginId(required = false) Integer user_id,
                          @RequestParam("code") String code,
                          HttpServletResponse response) {
         String accessToken = getAccessToken("github", code);
@@ -79,7 +80,7 @@ public class OauthController {
     }
 
     @GetMapping("/gitee/callback")
-    public void giteeCb(@ModelAttribute("user_id") Integer user_id,
+    public void giteeCb(@LoginId(required = false) Integer user_id,
                         @RequestParam("code") String code,
                         HttpServletResponse response) {
         String accessToken = getAccessToken("gitee", code);
@@ -117,7 +118,7 @@ public class OauthController {
     }
 
     @GetMapping("/dingtalk/callback")
-    public void dingtalkCb(@ModelAttribute("user_id") Integer user_id,
+    public void dingtalkCb(@LoginId(required = false) Integer user_id,
                            @RequestParam("code") String code,
                            HttpServletResponse response) {
         JSONObject dingtalkUserInfo = getDingtalkUserInfo(code);

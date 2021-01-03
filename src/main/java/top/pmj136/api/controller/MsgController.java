@@ -3,6 +3,7 @@ package top.pmj136.api.controller;
 
 import org.springframework.web.bind.annotation.*;
 
+import top.pmj136.api.annotation.LoginId;
 import top.pmj136.api.service.impl.MsgNoticeServiceImpl;
 import top.pmj136.api.service.impl.MsgRemarkServiceImpl;
 import top.pmj136.api.service.impl.MsgStarServiceImpl;
@@ -32,7 +33,7 @@ public class MsgController {
     private UserServiceImpl userService;
 
     @PostMapping("/query")
-    public Result queryMsg(@ModelAttribute("user_id") Integer user_id,
+    public Result queryMsg(@LoginId Integer user_id,
                            @RequestBody Map<String, Object> req) {
         Integer page= (Integer) req.get("page");
         Integer size= (Integer) req.get("size");
@@ -43,7 +44,7 @@ public class MsgController {
     }
 
     @GetMapping("/count")
-    public Result articleIndex(@ModelAttribute("user_id") Integer user_id) {
+    public Result articleIndex(@LoginId(required = false) Integer user_id) {
         return userService.countMsg(user_id);
     }
 
@@ -66,7 +67,7 @@ public class MsgController {
     }
 
     @PostMapping("/delAll")
-    public Result delAll(@ModelAttribute("user_id") Integer target_id,
+    public Result delAll(@LoginId Integer target_id,
                          @RequestBody Map<String, Object> req) {
         String type = (String) req.get("type");
         if ("remark".equals(type)) msgRemarkService.delAll(target_id);

@@ -4,10 +4,11 @@ package top.pmj136.api.controller;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.pmj136.api.annotation.LoginId;
 import top.pmj136.api.entity.*;
 import top.pmj136.api.service.impl.*;
 import top.pmj136.api.util.Result;
-import top.pmj136.api.util.UploadUtil;
+import top.pmj136.api.component.UploadHelper;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
@@ -39,7 +40,7 @@ public class ArticleController {
     private ArticleTagServiceImpl articleTagService;
 
     @Resource
-    private UploadUtil uploadUtil;
+    private UploadHelper uploadHelper;
 
 
     @PostMapping("/recommend")
@@ -80,7 +81,7 @@ public class ArticleController {
     //article_id,user_id
     @PostMapping("/detail")
     public Result getDetailById(@RequestBody Map<String, Integer> req,
-                                @ModelAttribute("user_id") Integer user_id) {
+                                @LoginId(required = false) Integer user_id) {
         req.put("user_id", user_id);
         articleBrowseService.track(req);
         return articleService.getDetailById(req);
@@ -89,7 +90,7 @@ public class ArticleController {
     //type,order,page,size
     @PostMapping("/list")
     public Result getList(@RequestBody Map<String, Object> req,
-                          @ModelAttribute("user_id") Integer user_id) {
+                          @LoginId(required = false) Integer user_id) {
         Integer page = (Integer) req.get("page");
         Integer size = (Integer) req.get("size");
         Integer type = (Integer) req.get("type");
@@ -100,48 +101,52 @@ public class ArticleController {
     //type,page,size,keyword,user_id
     @PostMapping("/search")
     public Result search(@RequestBody Map<String, Object> req,
-                         @ModelAttribute("user_id") Integer user_id) {
+                         @LoginId(required = false) Integer user_id) {
         req.put("user_id", user_id);
         return articleService.search(req);
     }
 
     @PostMapping("/img/upload")
     public Result saveImg(@RequestParam("img") MultipartFile file) {
-        Map<String, Object> objectMap = uploadUtil.push("article", file);
+        Map<String, Object> objectMap = uploadHelper.push("article", file);
         if ((boolean) objectMap.get("flag")) return Result.resolve(objectMap.get("url"));
         return Result.reject((String) objectMap.get("msg"));
     }
 
     @PostMapping("/img/del")
     public Result delImg(@RequestBody Map<String, String> req) {
-        return Result.resolve(uploadUtil.del(req.get("name")));
+        return Result.resolve(uploadHelper.del(req.get("name")));
     }
 
     /*添加收藏*/
     @PostMapping("/collect/add")
-    public Result add(@RequestBody ArticleCollect articleCollect) {
+    public Result addCollect(@RequestBody ArticleCollect articleCollect,
+                      @LoginId Integer user_id) {
+        articleCollect.setUserId(user_id);
         return articleCollectService.add(articleCollect);
     }
 
     /*取消收藏*/
     @PostMapping("/collect/cancel")
-    public Result cancel(@RequestBody Map<String, Object> req) {
+    public Result cancelCollect(@RequestBody Map<String, Object> req,
+                         @LoginId Integer user_id) {
+        req.put("user_id", user_id);
         return articleCollectService.cancel(req);
     }
 
 
     /*添加点赞 */
     @PostMapping("/star/add")
-    public Result add(@RequestBody ArticleStar req,
-                      @ModelAttribute("user_id") Integer user_id) {
+    public Result addStar(@RequestBody ArticleStar req,
+                      @LoginId Integer user_id) {
         req.setUserId(user_id);
         return articleStarService.add(req);
     }
 
     /*添加收藏*/
     @PostMapping("/star/cancel")
-    public Result cancel(@RequestBody Map<String, Integer> req,
-                         @ModelAttribute("user_id") Integer user_id) {
+    public Result cancelStar(@RequestBody Map<String, Integer> req,
+                         @LoginId Integer user_id) {
         req.put("user_id", user_id);
         return articleStarService.cancel(req);
     }
@@ -166,12 +171,12 @@ public class ArticleController {
 
 
     @PostMapping("/tag/add")
-    public Result tagAdd(@RequestBody @Valid ArticleTag articleTag) {
+    public Result addTag(@RequestBody @Valid ArticleTag articleTag) {
         return articleTagService.add(articleTag);
     }
 
     @PostMapping("/tag/update")
-    public Result tagUpdate(@RequestBody ArticleTag articleTag) {
+    public Result updateTag(@RequestBody ArticleTag articleTag) {
         return articleTagService.update(articleTag);
     }
 
@@ -185,13 +190,13 @@ public class ArticleController {
 
     /*新增文章类型*/
     @PostMapping("/type/add")
-    public Result typeAdd(@RequestBody @Valid ArticleType articleType) {
+    public Result addType(@RequestBody @Valid ArticleType articleType) {
         return articleTypeService.add(articleType);
     }
 
     /*更新文章类型*/
     @PostMapping("/type/update")
-    public Result update(@RequestBody ArticleType articleType) {
+    public Result updateType(@RequestBody ArticleType articleType) {
         return articleTypeService.update(articleType);
     }
 
