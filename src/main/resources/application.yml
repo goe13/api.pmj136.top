@@ -78,10 +78,3 @@ api:
     domain: localhost
     http-only: false
     expire: 604800
-
-#aliyun:
-#  oss:
-#    bucket-name: pmj136
-#    key: LTAI4GELmrujBiLUWLnH3Qvx
-#    secret: LSJxMVltZ4OYwGod3lNQUO9y2kf2eR
-#    endpoint: https://oss-cn-hangzhou.aliyuncs.com
